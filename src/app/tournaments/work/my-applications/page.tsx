@@ -49,7 +49,7 @@ export default function MyApplicationsPage() {
             <div className="container mx-auto px-4 py-6">
                 {/* Filter Tabs */}
                 <div className="flex gap-2 overflow-x-auto pb-4 mb-6">
-                    {(['all', 'pending', 'reviewing', 'accepted', 'rejected'] as const).map(status => {
+                    {(['all', 'pending', 'under_review', 'accepted', 'rejected'] as const).map(status => {
                         const count = status === 'all' 
                             ? enrichedApplications.length 
                             : enrichedApplications.filter(a => a.status === status).length;
@@ -63,7 +63,7 @@ export default function MyApplicationsPage() {
                                         : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                                 }`}
                             >
-                                {status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
+                                {status === 'all' ? 'All' : status === 'under_review' ? 'Under Review' : status.charAt(0).toUpperCase() + status.slice(1)}
                                 <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                                     filter === status ? 'bg-white/20' : 'bg-gray-100'
                                 }`}>
@@ -99,7 +99,7 @@ export default function MyApplicationsPage() {
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2 mb-1">
                                                         <h3 className="text-lg font-bold text-gray-800">
-                                                            {application.job?.title || 'Unknown Position'}
+                                                            {application.job?.role || application.position || 'Unknown Position'}
                                                         </h3>
                                                     </div>
                                                     <p className="text-sky-600 font-medium">{application.tournament?.name}</p>
@@ -148,7 +148,7 @@ export default function MyApplicationsPage() {
                                                 </p>
                                             </div>
                                         )}
-                                        {application.status === 'reviewing' && (
+                                        {application.status === 'under_review' && (
                                             <div className="mt-4 p-3 bg-blue-50 rounded-xl border border-blue-100">
                                                 <p className="text-sm text-blue-700">
                                                     Your application is currently being reviewed by the organizers.
@@ -218,7 +218,7 @@ export default function MyApplicationsPage() {
                             </div>
                             <div className="text-center p-3 bg-yellow-50 rounded-xl">
                                 <p className="text-2xl font-bold text-yellow-600">
-                                    {enrichedApplications.filter(a => a.status === 'pending' || a.status === 'reviewing').length}
+                                    {enrichedApplications.filter(a => a.status === 'pending' || a.status === 'under_review').length}
                                 </p>
                                 <p className="text-sm text-gray-500">In Progress</p>
                             </div>
