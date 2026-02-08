@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Header } from '@/components/Navigation';
 import { MapView } from '@/components/MapView';
@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { mockTournaments, mockCurrentUser } from '@/lib/mock-data';
+import { useUser } from '@/context/UserContext';
+import { tournamentsAPI } from '@/lib/api/client';
 import { Tournament } from '@/types';
 import { formatDate, getSkillLabel } from '@/lib/utils';
 import {
@@ -25,10 +26,18 @@ import {
 } from 'lucide-react';
 
 export default function TournamentsPage() {
-    const [tournaments] = useState<Tournament[]>(mockTournaments);
+    const { user } = useUser();
+    const [tournaments, setTournaments] = useState<Tournament[]>([]);
     const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
     const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
     const [filter, setFilter] = useState<'all' | 'singles' | 'doubles' | 'mixed'>('all');
+    const [joining, setJoining] = useState(false);
+
+    useEffect(() => {
+        tournamentsAPI.getAll()
+            .then(data => setTournaments(data))
+            .catch(err => console.error('Failed to fetch tournaments:', err));
+    }, []);
 
     const userLocation = { lat: 52.4862, lng: -1.8904 };
 
@@ -36,14 +45,32 @@ export default function TournamentsPage() {
         t => filter === 'all' || t.format === filter
     );
 
-    const handleJoin = (tournament: Tournament) => {
-        // In real app, this would call API
-        alert(`🎉 You've registered for ${tournament.name}!`);
-        setSelectedTournament(null);
+    const joinedTournaments = user
+        ? tournaments.filter(t => t.currentPlayers.includes(user.id))
+        : [];
+
+    const handleJoin = async (tournament: Tournament) => {
+        if (!user) return;
+        setJoining(true);
+        try {
+            await tournamentsAPI.join(tournament.id);
+            setTournaments(prev =>
+                prev.map(t =>
+                    t.id === tournament.id
+                        ? { ...t, currentPlayers: [...t.currentPlayers, user.id] }
+                        : t
+                )
+            );
+            setSelectedTournament(null);
+        } catch (err) {
+            console.error('Failed to join tournament:', err);
+        } finally {
+            setJoining(false);
+        }
     };
 
     const isJoined = (tournament: Tournament) => {
-        return tournament.currentPlayers.includes(mockCurrentUser.id);
+        return user ? tournament.currentPlayers.includes(user.id) : false;
     };
 
     const spotsLeft = (tournament: Tournament) => {
@@ -95,46 +122,34 @@ export default function TournamentsPage() {
 
             <div className="max-w-lg mx-auto px-4 pt-4">
                 {/* My Joined/Incoming Tournaments */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-gradient-to-br from-sky-500/20 to-blue-500/20 rounded-2xl p-4 mb-6 border border-sky-500/30"
-                >
-                    <h3 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-                        <Medal className="w-5 h-5 text-sky-400" />
-                        My Joined Tournaments
-                    </h3>
-                    <div className="space-y-3">
-                        {/* Mock joined tournaments */}
-                        <div className="flex items-center gap-3 p-3 bg-slate-800/60 rounded-xl">
-                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
-                                <Trophy className="w-5 h-5 text-white" />
-                            </div>
-                            <div className="flex-1">
-                                <h4 className="font-semibold text-white text-sm">Aston Spring Championship</h4>
-                                <p className="text-xs text-slate-400">Feb 20, 2025 • Singles</p>
-                            </div>
-                            <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
-                                Registered
-                            </Badge>
+                {joinedTournaments.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-gradient-to-br from-sky-500/20 to-blue-500/20 rounded-2xl p-4 mb-6 border border-sky-500/30"
+                    >
+                        <h3 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                            <Medal className="w-5 h-5 text-sky-400" />
+                            My Joined Tournaments
+                        </h3>
+                        <div className="space-y-3">
+                            {joinedTournaments.map(tournament => (
+                                <div key={tournament.id} className="flex items-center gap-3 p-3 bg-slate-800/60 rounded-xl">
+                                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
+                                        <Trophy className="w-5 h-5 text-white" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h4 className="font-semibold text-white text-sm">{tournament.name}</h4>
+                                        <p className="text-xs text-slate-400">{formatDate(tournament.date)} &bull; <span className="capitalize">{tournament.format}</span></p>
+                                    </div>
+                                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                                        Registered
+                                    </Badge>
+                                </div>
+                            ))}
                         </div>
-                        <div className="flex items-center gap-3 p-3 bg-slate-800/60 rounded-xl">
-                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
-                                <Trophy className="w-5 h-5 text-white" />
-                            </div>
-                            <div className="flex-1">
-                                <h4 className="font-semibold text-white text-sm">Birmingham Open 2025</h4>
-                                <p className="text-xs text-slate-400">Mar 5, 2025 • Doubles</p>
-                            </div>
-                            <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
-                                Upcoming
-                            </Badge>
-                        </div>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-3 text-center">
-                        View all in My Tournaments
-                    </p>
-                </motion.div>
+                    </motion.div>
+                )}
 
                 <AnimatePresence mode="wait">
                     {viewMode === 'list' ? (
@@ -327,9 +342,9 @@ export default function TournamentsPage() {
                                             <div
                                                 key={level}
                                                 className={`w-6 h-6 rounded text-xs flex items-center justify-center font-medium ${level >= selectedTournament.skillLevelMin &&
-                                                        level <= selectedTournament.skillLevelMax
-                                                        ? 'bg-primary text-primary-foreground'
-                                                        : 'bg-muted text-muted-foreground'
+                                                    level <= selectedTournament.skillLevelMax
+                                                    ? 'bg-primary text-primary-foreground'
+                                                    : 'bg-muted text-muted-foreground'
                                                     }`}
                                             >
                                                 {level}
@@ -369,8 +384,9 @@ export default function TournamentsPage() {
                                         <Button
                                             className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600"
                                             onClick={() => handleJoin(selectedTournament)}
+                                            disabled={joining}
                                         >
-                                            Register Now ({spotsLeft(selectedTournament)} spots left)
+                                            {joining ? 'Registering...' : `Register Now (${spotsLeft(selectedTournament)} spots left)`}
                                         </Button>
                                     )}
                                 </div>

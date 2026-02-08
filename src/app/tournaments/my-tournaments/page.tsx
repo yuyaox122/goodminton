@@ -1,10 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-    Trophy, 
-    Users, 
+import {
+    Trophy,
+    Users,
     Briefcase,
     Calendar,
     Eye,
@@ -15,9 +15,10 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { Header } from '@/components/Navigation';
-import { mockOrganisedTournaments } from '@/lib/mock-data';
+import { tournamentsAPI } from '@/lib/api/client';
+import { OrganisedTournament } from '@/types';
 
-const statusColors = {
+const statusColors: Record<string, string> = {
     draft: 'bg-slate-700 text-slate-300',
     pending: 'bg-yellow-500/20 text-yellow-400',
     active: 'bg-green-500/20 text-green-400',
@@ -26,10 +27,18 @@ const statusColors = {
 };
 
 export default function MyTournamentsPage() {
+    const [tournaments, setTournaments] = useState<OrganisedTournament[]>([]);
+
+    useEffect(() => {
+        tournamentsAPI.getOrganised()
+            .then(data => setTournaments(data))
+            .catch(err => console.error('Failed to fetch organised tournaments:', err));
+    }, []);
+
     return (
         <div className="min-h-screen bg-slate-900">
-            <Header 
-                title="My Tournaments" 
+            <Header
+                title="My Tournaments"
                 subtitle="Manage your organised tournaments"
             />
 
@@ -47,7 +56,7 @@ export default function MyTournamentsPage() {
 
                 {/* Tournaments List */}
                 <div className="space-y-4">
-                    {mockOrganisedTournaments.map((tournament, index) => (
+                    {tournaments.map((tournament, index) => (
                         <motion.div
                             key={tournament.id}
                             initial={{ opacity: 0, y: 20 }}
@@ -147,7 +156,7 @@ export default function MyTournamentsPage() {
                 </div>
 
                 {/* Empty State */}
-                {mockOrganisedTournaments.length === 0 && (
+                {tournaments.length === 0 && (
                     <div className="text-center py-16">
                         <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-slate-800 flex items-center justify-center">
                             <Trophy className="w-10 h-10 text-sky-400" />

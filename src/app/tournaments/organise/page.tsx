@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-    Trophy, 
-    UserPlus, 
-    Calendar, 
+import {
+    Trophy,
+    UserPlus,
+    Calendar,
     Briefcase,
     ArrowRight,
     ChevronLeft,
@@ -21,7 +21,8 @@ import { useUser } from '@/context/UserContext';
 import { Header } from '@/components/Navigation';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { mockTournamentJobs, mockOrganisedTournaments } from '@/lib/mock-data';
+import { tournamentsAPI } from '@/lib/api/client';
+import { TournamentJob } from '@/types';
 
 type FlowType = 'join' | 'organize' | 'work' | null;
 
@@ -70,6 +71,24 @@ const joinQuestions: TournamentQuestion[] = [
 
 // Organize Tournament Questions
 const organizeQuestions: TournamentQuestion[] = [
+    {
+        id: 'name',
+        question: 'What is the name of your tournament?',
+        type: 'input',
+        placeholder: 'e.g. Birmingham Spring Open 2026',
+    },
+    {
+        id: 'date',
+        question: 'When will the tournament take place?',
+        type: 'input',
+        placeholder: 'e.g. 2026-03-15',
+    },
+    {
+        id: 'format',
+        question: 'What format will the tournament be?',
+        type: 'single',
+        options: ['Singles', 'Doubles', 'Mixed'],
+    },
     {
         id: 'scale',
         question: 'What scale is the tournament going to be?',
@@ -124,16 +143,24 @@ function TournamentOrganiseContent() {
     const searchParams = useSearchParams();
     const { user } = useUser();
     const userName = user?.name?.split(' ')[0] || 'Player';
-    
+
     const [selectedFlow, setSelectedFlow] = useState<FlowType>(
         (searchParams.get('action') as FlowType) || null
     );
     const [currentStep, setCurrentStep] = useState(0);
     const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
     const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [jobs, setJobs] = useState<TournamentJob[]>([]);
+
+    useEffect(() => {
+        tournamentsAPI.getJobs()
+            .then(data => setJobs(data))
+            .catch(err => console.error('Failed to fetch jobs:', err));
+    }, []);
 
     const currentQuestions = selectedFlow === 'join' ? joinQuestions : organizeQuestions;
-    
+
     const getVisibleQuestions = () => {
         return currentQuestions.filter(q => {
             if (!q.condition) return true;
@@ -173,16 +200,46 @@ function TournamentOrganiseContent() {
         return !!answer;
     };
 
-    const handleNext = () => {
+    const parseMaxPlayers = (participants: string): number => {
+        const map: Record<string, number> = {
+            '16-32 players': 32,
+            '32-64 players': 64,
+            '64-128 players': 128,
+            '128-256 players': 256,
+            '256+ players': 512,
+        };
+        return map[participants] || 32;
+    };
+
+    const handleNext = async () => {
         if (currentStep < visibleQuestions.length - 1) {
             setCurrentStep(prev => prev + 1);
         } else {
             // Complete flow
-            console.log('Answers:', answers);
             if (selectedFlow === 'join') {
                 router.push('/tournaments');
             } else if (selectedFlow === 'organize') {
-                router.push('/tournaments');
+                setIsSubmitting(true);
+                try {
+                    const locationText = (answers.location as string) || '';
+                    await tournamentsAPI.create({
+                        name: answers.name as string,
+                        date: new Date(answers.date as string).toISOString(),
+                        format: ((answers.format as string) || 'singles').toLowerCase(),
+                        locationVenue: locationText,
+                        locationAddress: locationText,
+                        maxPlayers: parseMaxPlayers(answers.participants as string),
+                        scale: answers.scale as string,
+                        hiringPersonnel: answers.hiring === 'Yes',
+                        status: 'pending',
+                    });
+                    router.push('/tournaments');
+                } catch (error) {
+                    console.error('Failed to create tournament:', error);
+                    alert('Failed to create tournament. Please make sure you are logged in.');
+                } finally {
+                    setIsSubmitting(false);
+                }
             }
         }
     };
@@ -207,8 +264,8 @@ function TournamentOrganiseContent() {
     if (!selectedFlow) {
         return (
             <div className="min-h-screen bg-slate-900">
-                <Header 
-                    title="Tournaments" 
+                <Header
+                    title="Tournaments"
                     subtitle="Join, organize, or work at tournaments"
                 />
 
@@ -289,8 +346,8 @@ function TournamentOrganiseContent() {
     if (selectedFlow === 'work') {
         return (
             <div className="min-h-screen bg-slate-900">
-                <Header 
-                    title="Find Tournament Jobs" 
+                <Header
+                    title="Find Tournament Jobs"
                     subtitle="Get paid while being part of the action"
                 />
 
@@ -310,11 +367,10 @@ function TournamentOrganiseContent() {
                                 <button
                                     key={month}
                                     onClick={() => setSelectedMonth(prev => prev === month ? null : month)}
-                                    className={`px-4 py-2 rounded-xl font-medium transition-all ${
-                                        selectedMonth === month
+                                    className={`px-4 py-2 rounded-xl font-medium transition-all ${selectedMonth === month
                                             ? 'bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-lg'
                                             : 'bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white'
-                                    }`}
+                                        }`}
                                 >
                                     {month}
                                 </button>
@@ -335,81 +391,66 @@ function TournamentOrganiseContent() {
                         </h2>
 
                         <div className="space-y-4">
-                            {mockTournamentJobs
+                            {jobs
                                 .filter(job => {
                                     if (!selectedMonth) return true;
-                                    const tournament = mockOrganisedTournaments.find(t => t.id === job.tournamentId);
-                                    if (!tournament?.date) return false;
-                                    
-                                    // Parse selectedMonth "March 2026" to match against "2026-03-15"
-                                    const monthNames: Record<string, string> = {
-                                        'January': '01', 'February': '02', 'March': '03', 'April': '04',
-                                        'May': '05', 'June': '06', 'July': '07', 'August': '08',
-                                        'September': '09', 'October': '10', 'November': '11', 'December': '12'
-                                    };
-                                    const [monthName, year] = selectedMonth.split(' ');
-                                    const monthNum = monthNames[monthName];
-                                    const targetPrefix = `${year}-${monthNum}`;
-                                    
-                                    return tournament.date.startsWith(targetPrefix);
+                                    // Filter by job dates (e.g. "March 15, 2026")
+                                    return job.dates?.some(d => d.includes(selectedMonth.split(' ')[0]) && d.includes(selectedMonth.split(' ')[1]));
                                 })
-                                .map((job, index) => {
-                                    const tournament = mockOrganisedTournaments.find(t => t.id === job.tournamentId);
-                                    return (
-                                    <motion.div
-                                        key={job.id}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: index * 0.1 }}
-                                        className="bg-slate-800 rounded-2xl shadow-lg p-6 border border-white/10 hover:border-white/20 hover:shadow-xl transition-all"
-                                    >
-                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                            <div className="flex-1">
-                                                <h3 className="text-lg font-bold text-white mb-1">{job.role}</h3>
-                                                <p className="text-sky-400 font-medium mb-2">{tournament?.name || 'Tournament'}</p>
-                                                <div className="flex flex-wrap items-center gap-4 text-sm text-slate-400">
-                                                    <span className="flex items-center gap-1">
-                                                        <MapPin className="w-4 h-4" />
-                                                        {tournament?.location.venue || 'TBD'}
-                                                    </span>
-                                                    <span className="flex items-center gap-1">
-                                                        <Calendar className="w-4 h-4" />
-                                                        {tournament?.date || 'TBD'}
-                                                    </span>
-                                                    <span className="flex items-center gap-1">
-                                                        <Clock className="w-4 h-4" />
-                                                        {job.dates?.[0] || 'Full day'}
-                                                    </span>
+                                .map((job, index) => (
+                                        <motion.div
+                                            key={job.id}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: index * 0.1 }}
+                                            className="bg-slate-800 rounded-2xl shadow-lg p-6 border border-white/10 hover:border-white/20 hover:shadow-xl transition-all"
+                                        >
+                                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                                <div className="flex-1">
+                                                    <h3 className="text-lg font-bold text-white mb-1">{job.role}</h3>
+                                                    <p className="text-sky-400 font-medium mb-2">{job.tournamentName}</p>
+                                                    <div className="flex flex-wrap items-center gap-4 text-sm text-slate-400">
+                                                        <span className="flex items-center gap-1">
+                                                            <MapPin className="w-4 h-4" />
+                                                            {job.location || 'TBD'}
+                                                        </span>
+                                                        <span className="flex items-center gap-1">
+                                                            <Calendar className="w-4 h-4" />
+                                                            {job.dates?.[0] || 'TBD'}
+                                                        </span>
+                                                        <span className="flex items-center gap-1">
+                                                            <Clock className="w-4 h-4" />
+                                                            {job.dates?.[0] || 'Full day'}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-sm text-slate-300 mt-2">{job.description}</p>
                                                 </div>
-                                                <p className="text-sm text-slate-300 mt-2">{job.description}</p>
-                                            </div>
 
-                                            <div className="flex items-center gap-4">
-                                                <div className="text-right">
-                                                    <p className="text-2xl font-bold text-green-400">£{job.wage}/hr</p>
-                                                    <p className="text-sm text-slate-400">
-                                                        <Users className="w-3 h-3 inline mr-1" />
-                                                        {job.slots - job.filled} spots left
-                                                    </p>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="text-right">
+                                                        <p className="text-2xl font-bold text-green-400">£{job.wage}/hr</p>
+                                                        <p className="text-sm text-slate-400">
+                                                            <Users className="w-3 h-3 inline mr-1" />
+                                                            {job.slots - job.filled} spots left
+                                                        </p>
+                                                    </div>
+                                                    <Link
+                                                        href={`/tournaments/work/apply/${job.id}`}
+                                                        className="px-6 py-3 bg-white text-slate-900 font-semibold rounded-xl hover:bg-slate-100 transition-all"
+                                                    >
+                                                        Apply
+                                                    </Link>
                                                 </div>
-                                                <Link 
-                                                    href={`/tournaments/work/apply/${job.id}`}
-                                                    className="px-6 py-3 bg-white text-slate-900 font-semibold rounded-xl hover:bg-slate-100 transition-all"
-                                                >
-                                                    Apply
-                                                </Link>
                                             </div>
-                                        </div>
-                                    </motion.div>
-                                    );
-                                })}
+                                        </motion.div>
+                                    ))}
                         </div>
                     </motion.div>
 
                     {/* Back Button */}
                     <button
                         onClick={resetFlow}
-                        className="mt-6 flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors"
+                        className="mt-6 flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
                     >
                         <ChevronLeft className="w-5 h-5" />
                         Back to options
@@ -421,9 +462,9 @@ function TournamentOrganiseContent() {
 
     // Join / Organize Flow - Question by Question
     return (
-        <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50">
+        <div className="min-h-screen bg-slate-900">
             {/* Progress Bar */}
-            <div className="fixed top-16 left-0 right-0 h-1 bg-gray-200 z-40">
+            <div className="fixed top-16 left-0 right-0 h-1 bg-slate-700 z-40">
                 <motion.div
                     className="h-full bg-gradient-to-r from-sky-400 to-blue-500"
                     initial={{ width: 0 }}
@@ -435,7 +476,7 @@ function TournamentOrganiseContent() {
             <div className="container mx-auto px-4 py-8">
                 {/* Step Counter */}
                 <div className="text-center mb-4">
-                    <span className="text-sm text-sky-600 font-medium">
+                    <span className="text-sm text-sky-400 font-medium">
                         Step {currentStep + 1} of {visibleQuestions.length}
                     </span>
                 </div>
@@ -452,7 +493,7 @@ function TournamentOrganiseContent() {
                     >
                         {/* Icon */}
                         <div className="flex justify-center mb-6">
-                            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white shadow-lg shadow-sky-200">
+                            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white shadow-lg">
                                 {selectedFlow === 'join' ? (
                                     <UserPlus className="w-8 h-8" />
                                 ) : (
@@ -462,7 +503,7 @@ function TournamentOrganiseContent() {
                         </div>
 
                         {/* Question */}
-                        <h1 className="text-2xl md:text-4xl font-bold text-center text-gray-800 mb-8">
+                        <h1 className="text-2xl md:text-4xl font-bold text-center text-white mb-8">
                             {currentQuestion?.question}
                         </h1>
 
@@ -473,7 +514,7 @@ function TournamentOrganiseContent() {
                                 placeholder={currentQuestion.placeholder}
                                 value={(answers[currentQuestion.id] as string) || ''}
                                 onChange={(e) => handleInputChange(e.target.value)}
-                                className="w-full px-6 py-4 text-lg rounded-2xl border-2 border-sky-200 focus:border-sky-400 focus:ring-4 focus:ring-sky-100 outline-none transition-all"
+                                className="w-full px-6 py-4 text-lg rounded-2xl border-2 border-white/20 bg-slate-800 text-white placeholder-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-500/20 outline-none transition-all"
                             />
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -486,20 +527,18 @@ function TournamentOrganiseContent() {
                                         <button
                                             key={option}
                                             onClick={() => handleOptionSelect(option)}
-                                            className={`relative flex items-center gap-4 p-5 rounded-2xl border-2 transition-all duration-200 ${
-                                                isSelected
-                                                    ? 'border-sky-400 bg-sky-50 shadow-lg shadow-sky-100'
-                                                    : 'border-gray-200 bg-white hover:border-sky-200 hover:bg-sky-50/50'
-                                            }`}
+                                            className={`relative flex items-center gap-4 p-5 rounded-2xl border-2 transition-all duration-200 ${isSelected
+                                                    ? 'border-sky-400 bg-sky-500/20 shadow-lg shadow-sky-500/10'
+                                                    : 'border-white/10 bg-slate-800 hover:border-white/20 hover:bg-slate-700'
+                                                }`}
                                         >
-                                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                                                isSelected
+                                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected
                                                     ? 'border-sky-500 bg-sky-500'
-                                                    : 'border-gray-300'
-                                            }`}>
+                                                    : 'border-slate-500'
+                                                }`}>
                                                 {isSelected && <Check className="w-4 h-4 text-white" />}
                                             </div>
-                                            <span className={`font-medium ${isSelected ? 'text-sky-700' : 'text-gray-700'}`}>
+                                            <span className={`font-medium ${isSelected ? 'text-sky-300' : 'text-slate-300'}`}>
                                                 {option}
                                             </span>
                                         </button>
@@ -511,11 +550,11 @@ function TournamentOrganiseContent() {
                 </AnimatePresence>
 
                 {/* Navigation Buttons */}
-                <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-100 p-4 md:relative md:bg-transparent md:border-none md:mt-12">
+                <div className="fixed bottom-0 left-0 right-0 bg-slate-800/80 backdrop-blur-xl border-t border-white/10 p-4 md:relative md:bg-transparent md:border-none md:mt-12">
                     <div className="max-w-2xl mx-auto flex items-center justify-between gap-4">
                         <button
                             onClick={handleBack}
-                            className="flex items-center gap-2 px-6 py-3 text-gray-600 font-medium rounded-xl hover:bg-gray-100 transition-colors"
+                            className="flex items-center gap-2 px-6 py-3 text-slate-400 font-medium rounded-xl hover:bg-white/10 transition-colors"
                         >
                             <ChevronLeft className="w-5 h-5" />
                             Back
@@ -523,18 +562,19 @@ function TournamentOrganiseContent() {
 
                         <button
                             onClick={handleNext}
-                            disabled={!canProceed()}
-                            className={`flex items-center gap-2 px-8 py-3 font-semibold rounded-xl transition-all ${
-                                canProceed()
-                                    ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-lg shadow-sky-200 hover:shadow-xl'
-                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                            }`}
+                            disabled={!canProceed() || isSubmitting}
+                            className={`flex items-center gap-2 px-8 py-3 font-semibold rounded-xl transition-all ${canProceed() && !isSubmitting
+                                    ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-lg hover:shadow-xl'
+                                    : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                                }`}
                         >
-                            {currentStep === visibleQuestions.length - 1 
-                                ? (selectedFlow === 'join' ? 'Find Tournaments' : 'Create Tournament')
-                                : 'Continue'
+                            {isSubmitting
+                                ? 'Creating...'
+                                : currentStep === visibleQuestions.length - 1
+                                    ? (selectedFlow === 'join' ? 'Find Tournaments' : 'Create Tournament')
+                                    : 'Continue'
                             }
-                            <ChevronRight className="w-5 h-5" />
+                            {!isSubmitting && <ChevronRight className="w-5 h-5" />}
                         </button>
                     </div>
                 </div>
@@ -546,7 +586,7 @@ function TournamentOrganiseContent() {
 export default function TournamentOrganisePage() {
     return (
         <Suspense fallback={
-            <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 flex items-center justify-center">
+            <div className="min-h-screen bg-slate-900 flex items-center justify-center">
                 <div className="animate-pulse text-sky-500">Loading...</div>
             </div>
         }>
