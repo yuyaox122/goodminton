@@ -309,7 +309,7 @@ function TournamentOrganiseContent() {
                             {workMonths.map(month => (
                                 <button
                                     key={month}
-                                    onClick={() => setSelectedMonth(month)}
+                                    onClick={() => setSelectedMonth(prev => prev === month ? null : month)}
                                     className={`px-4 py-2 rounded-xl font-medium transition-all ${
                                         selectedMonth === month
                                             ? 'bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-lg shadow-sky-200'
@@ -339,7 +339,19 @@ function TournamentOrganiseContent() {
                                 .filter(job => {
                                     if (!selectedMonth) return true;
                                     const tournament = mockOrganisedTournaments.find(t => t.id === job.tournamentId);
-                                    return tournament?.date.includes(selectedMonth.split(' ')[0]);
+                                    if (!tournament?.date) return false;
+                                    
+                                    // Parse selectedMonth "March 2026" to match against "2026-03-15"
+                                    const monthNames: Record<string, string> = {
+                                        'January': '01', 'February': '02', 'March': '03', 'April': '04',
+                                        'May': '05', 'June': '06', 'July': '07', 'August': '08',
+                                        'September': '09', 'October': '10', 'November': '11', 'December': '12'
+                                    };
+                                    const [monthName, year] = selectedMonth.split(' ');
+                                    const monthNum = monthNames[monthName];
+                                    const targetPrefix = `${year}-${monthNum}`;
+                                    
+                                    return tournament.date.startsWith(targetPrefix);
                                 })
                                 .map((job, index) => {
                                     const tournament = mockOrganisedTournaments.find(t => t.id === job.tournamentId);
