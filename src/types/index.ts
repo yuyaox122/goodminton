@@ -91,6 +91,7 @@ export interface Club {
     meetingDays: string[];
     skillLevelRange: [SkillLevel, SkillLevel];
     isOpen: boolean;
+    createdBy?: string; // User ID of the club creator
     createdAt: string;
 }
 

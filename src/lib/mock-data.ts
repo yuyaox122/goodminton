@@ -295,11 +295,12 @@ export const mockClubs: Club[] = [
             address: 'Aston University, Aston St, Birmingham B4 7ET',
         },
         memberCount: 89,
-        members: ['3', '5', '6', '8'],
+        members: ['current', '3', '5', '6', '8'],
         activityLevel: 'high',
         meetingDays: ['Monday', 'Wednesday', 'Friday'],
         skillLevelRange: [1, 8],
         isOpen: true,
+        createdBy: 'current', // Created by the demo user
         createdAt: '2021-09-01T10:00:00Z',
     },
     {

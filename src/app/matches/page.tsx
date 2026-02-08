@@ -11,7 +11,15 @@ import { Input } from '@/components/ui/input';
 import { mockPlayers, mockCurrentUser } from '@/lib/mock-data';
 import { Match } from '@/types';
 import { getSkillLabel, getSkillColor, timeAgo } from '@/lib/utils';
-import { MessageCircle, Send, Phone, Video, MoreVertical, ArrowLeft } from 'lucide-react';
+import { MessageCircle, Send, Phone, Video, MoreVertical, ArrowLeft, Calendar, UserX, Flag, Volume2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 // Generate some mock matches
 const generateMockMatches = (): Match[] => {
@@ -32,6 +40,7 @@ const generateMockMatches = (): Match[] => {
 };
 
 export default function MatchesPage() {
+    const router = useRouter();
     const [matches] = useState<Match[]>(generateMockMatches());
     const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
     const [message, setMessage] = useState('');
@@ -88,9 +97,35 @@ export default function MatchesPage() {
                                 <Button variant="ghost" size="icon">
                                     <Video size={18} />
                                 </Button>
-                                <Button variant="ghost" size="icon">
-                                    <MoreVertical size={18} />
-                                </Button>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon">
+                                            <MoreVertical size={18} />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-56">
+                                        <DropdownMenuItem 
+                                            onClick={() => router.push(`/partners/scheduling?partnerId=${otherPlayer?.id}&partnerName=${encodeURIComponent(otherPlayer?.name || '')}`)}
+                                            className="cursor-pointer"
+                                        >
+                                            <Calendar className="mr-2 h-4 w-4 text-sky-500" />
+                                            <span>Schedule a session</span>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem className="cursor-pointer">
+                                            <Volume2 className="mr-2 h-4 w-4" />
+                                            <span>Mute notifications</span>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem className="cursor-pointer text-orange-600">
+                                            <Flag className="mr-2 h-4 w-4" />
+                                            <span>Report user</span>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem className="cursor-pointer text-red-600">
+                                            <UserX className="mr-2 h-4 w-4" />
+                                            <span>Block user</span>
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
                         </div>
                     </div>

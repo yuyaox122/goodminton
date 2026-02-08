@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Calendar, 
@@ -13,9 +13,11 @@ import {
     Plus,
     Minus,
     DollarSign,
-    ArrowRight
+    ArrowRight,
+    Star,
+    Sparkles
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Header } from '@/components/Navigation';
 import { useUser } from '@/context/UserContext';
 import { useBooking } from '@/context/BookingContext';
@@ -34,8 +36,33 @@ const venues = [
     { id: '4', name: 'Perry Barr Leisure Centre', pricePerHour: 10 },
 ];
 
+// Wrapper component with Suspense for useSearchParams
 export default function SchedulingPage() {
+    return (
+        <Suspense fallback={<SchedulingLoadingState />}>
+            <SchedulingPageContent />
+        </Suspense>
+    );
+}
+
+function SchedulingLoadingState() {
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50">
+            <Header title="Schedule a Game" subtitle="Loading..." />
+            <div className="container mx-auto px-4 py-6 max-w-2xl">
+                <div className="animate-pulse space-y-4">
+                    <div className="h-32 bg-gray-200 rounded-3xl"></div>
+                    <div className="h-64 bg-gray-200 rounded-3xl"></div>
+                    <div className="h-48 bg-gray-200 rounded-3xl"></div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function SchedulingPageContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { user } = useUser();
     const { createSessionFromSchedule } = useBooking();
     
@@ -46,8 +73,67 @@ export default function SchedulingPage() {
     const [duration, setDuration] = useState<number>(1);
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [isScheduling, setIsScheduling] = useState(false);
+    
+    // Get partner info from URL params (from match modal or chat)
+    const urlPartnerId = searchParams.get('partnerId');
+    const urlPartnerName = searchParams.get('partnerName');
 
-    const connectedPartners = mockPlayers.slice(0, 5);
+    // Build connected partners list - ensure URL partner is always included
+    const connectedPartners = useMemo(() => {
+        const baseConnections = mockPlayers.slice(0, 5);
+        
+        if (urlPartnerId) {
+            // First, try to find the player in mockPlayers by ID
+            let matchedPlayer = mockPlayers.find(p => p.id === urlPartnerId);
+            
+            // If not found by ID and we have a name, try to find by name
+            if (!matchedPlayer && urlPartnerName) {
+                matchedPlayer = mockPlayers.find(p => 
+                    p.name.toLowerCase() === decodeURIComponent(urlPartnerName).toLowerCase()
+                );
+            }
+            
+            // If still not found but we have the name, create a temporary player object
+            if (!matchedPlayer && urlPartnerName) {
+                matchedPlayer = {
+                    id: urlPartnerId,
+                    name: decodeURIComponent(urlPartnerName),
+                    email: '',
+                    avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${urlPartnerId}`,
+                    bio: '',
+                    skillLevel: 5,
+                    playStyle: 'both' as const,
+                    location: { lat: 52.4862, lng: -1.8904, city: 'Birmingham' },
+                    stats: {
+                        wins: 0,
+                        losses: 0,
+                        totalMatches: 0,
+                        winRate: 0,
+                        preferredDays: [],
+                        averageRating: 0,
+                    },
+                    lookingFor: [],
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                };
+            }
+            
+            if (matchedPlayer) {
+                // Remove from base if exists, then add at front
+                const filtered = baseConnections.filter(c => c.id !== matchedPlayer!.id);
+                return [matchedPlayer, ...filtered];
+            }
+        }
+        
+        return baseConnections;
+    }, [urlPartnerId, urlPartnerName]);
+
+    // Auto-select the URL partner when component mounts or URL changes
+    useEffect(() => {
+        if (urlPartnerId && !selectedPartners.includes(urlPartnerId)) {
+            setSelectedPartners([urlPartnerId]);
+        }
+    }, [urlPartnerId]); // Only run when urlPartnerId changes
     
     const selectedVenue = useMemo(() => 
         venues.find(v => v.id === selectedVenueId),
@@ -325,35 +411,59 @@ export default function SchedulingPage() {
                         Invite Partners ({selectedPartners.length} selected)
                     </h2>
 
+                    {/* Show pre-selected partner banner if coming from match/chat */}
+                    {urlPartnerId && (
+                        <div className="mb-4 p-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
+                            <p className="text-sm text-green-700 flex items-center gap-2">
+                                <Sparkles className="w-4 h-4" />
+                                <span>
+                                    <strong>{connectedPartners.find(p => p.id === urlPartnerId)?.name || urlPartnerName || 'Your match'}</strong> has been pre-selected from your match! 🎉
+                                </span>
+                            </p>
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {connectedPartners.map(partner => (
-                            <button
-                                key={partner.id}
-                                onClick={() => togglePartner(partner.id)}
-                                className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
-                                    selectedPartners.includes(partner.id)
-                                        ? 'border-sky-400 bg-sky-50'
-                                        : 'border-gray-200 hover:border-sky-200 hover:bg-sky-50/50'
-                                }`}
-                            >
-                                <div className="relative">
-                                    <div className="w-12 h-12 rounded-full overflow-hidden">
-                                        <img src={partner.avatarUrl} alt={partner.name} className="w-full h-full object-cover" />
-                                    </div>
-                                    {selectedPartners.includes(partner.id) && (
-                                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-sky-500 rounded-full flex items-center justify-center">
-                                            <Check className="w-3 h-3 text-white" />
+                        {connectedPartners.map(partner => {
+                            const isPreSelected = partner.id === urlPartnerId;
+                            const isSelected = selectedPartners.includes(partner.id);
+                            
+                            return (
+                                <button
+                                    key={partner.id}
+                                    onClick={() => togglePartner(partner.id)}
+                                    className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all relative ${
+                                        isSelected
+                                            ? isPreSelected 
+                                                ? 'border-green-400 bg-green-50' 
+                                                : 'border-sky-400 bg-sky-50'
+                                            : 'border-gray-200 hover:border-sky-200 hover:bg-sky-50/50'
+                                    }`}
+                                >
+                                    {isPreSelected && (
+                                        <div className="absolute -top-2 -right-2 px-2 py-0.5 bg-green-500 text-white text-xs font-medium rounded-full">
+                                            From Match
                                         </div>
                                     )}
-                                </div>
-                                <div className="text-left flex-1">
-                                    <p className={`font-medium ${selectedPartners.includes(partner.id) ? 'text-sky-700' : 'text-gray-800'}`}>
-                                        {partner.name}
-                                    </p>
-                                    <p className="text-sm text-gray-500">Level {partner.skillLevel} • {partner.playStyle}</p>
-                                </div>
-                            </button>
-                        ))}
+                                    <div className="relative">
+                                        <div className={`w-12 h-12 rounded-full overflow-hidden ${isPreSelected ? 'ring-2 ring-green-400' : ''}`}>
+                                            <img src={partner.avatarUrl} alt={partner.name} className="w-full h-full object-cover" />
+                                        </div>
+                                        {isSelected && (
+                                            <div className={`absolute -bottom-1 -right-1 w-5 h-5 ${isPreSelected ? 'bg-green-500' : 'bg-sky-500'} rounded-full flex items-center justify-center`}>
+                                                <Check className="w-3 h-3 text-white" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="text-left flex-1">
+                                        <p className={`font-medium ${isSelected ? (isPreSelected ? 'text-green-700' : 'text-sky-700') : 'text-gray-800'}`}>
+                                            {partner.name}
+                                        </p>
+                                        <p className="text-sm text-gray-500">Level {partner.skillLevel} • {partner.playStyle}</p>
+                                    </div>
+                                </button>
+                            );
+                        })}
                     </div>
                 </motion.div>
 

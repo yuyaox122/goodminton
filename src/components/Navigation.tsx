@@ -97,19 +97,19 @@ export function TopNav() {
     const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
     return (
-        <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-white/80 backdrop-blur-xl">
-            <div className="container mx-auto px-4">
+        <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-xl border-b border-sky-100 shadow-sm">
+            <div className="container mx-auto px-6">
                 <div className="flex h-16 items-center justify-between">
                     {/* Logo */}
-                    <Link href="/" className="flex items-center gap-3">
+                    <Link href="/" className="flex items-center gap-3 group">
                         <GoodmintonLogo />
-                        <span className="text-xl font-bold bg-gradient-to-r from-sky-500 to-blue-600 bg-clip-text text-transparent">
-                            Goodminton
+                        <span className="text-xl font-bold tracking-wide text-slate-700 group-hover:text-sky-500 transition-colors">
+                            Good<span className="text-sky-500">minton</span>
                         </span>
                     </Link>
 
                     {/* Navigation Items */}
-                    <nav className="hidden md:flex items-center gap-1">
+                    <nav className="hidden lg:flex items-center gap-1">
                         {navItems.map((item) => (
                             <div
                                 key={item.label}
@@ -120,13 +120,12 @@ export function TopNav() {
                                 <Link
                                     href={item.href}
                                     className={cn(
-                                        "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                                        "flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-200 rounded-xl",
                                         pathname.startsWith(item.href)
-                                            ? "bg-sky-100 text-sky-700"
-                                            : "text-gray-600 hover:bg-sky-50 hover:text-sky-600"
+                                            ? "text-sky-500 bg-sky-50"
+                                            : "text-slate-600 hover:text-sky-500 hover:bg-sky-50/50"
                                     )}
                                 >
-                                    {item.icon}
                                     {item.label}
                                     {item.dropdownItems && (
                                         <ChevronDown 
@@ -143,28 +142,28 @@ export function TopNav() {
                                 <AnimatePresence>
                                     {activeDropdown === item.label && item.dropdownItems && (
                                         <motion.div
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: 10 }}
+                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
                                             transition={{ duration: 0.15 }}
-                                            className="absolute top-full left-0 mt-1 w-72 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden"
+                                            className="absolute top-full left-0 mt-2 w-72 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-sky-100 overflow-hidden"
                                         >
                                             <div className="p-2">
                                                 {item.dropdownItems.map((dropItem) => (
                                                     <Link
                                                         key={dropItem.label}
                                                         href={dropItem.href}
-                                                        className="flex items-start gap-3 p-3 rounded-lg hover:bg-sky-50 transition-colors group"
+                                                        className="flex items-start gap-3 p-3 rounded-xl hover:bg-sky-50 transition-colors group"
                                                     >
-                                                        <div className="p-2 rounded-lg bg-sky-100 text-sky-600 group-hover:bg-sky-200">
+                                                        <div className="p-2 rounded-xl bg-gradient-to-br from-sky-400 to-cyan-400 text-white shadow-md">
                                                             {dropItem.icon}
                                                         </div>
                                                         <div>
-                                                            <p className="font-medium text-gray-900 group-hover:text-sky-700">
+                                                            <p className="font-medium text-slate-700 group-hover:text-sky-500 transition-colors">
                                                                 {dropItem.label}
                                                             </p>
                                                             {dropItem.description && (
-                                                                <p className="text-xs text-gray-500 mt-0.5">
+                                                                <p className="text-xs text-slate-400 mt-0.5">
                                                                     {dropItem.description}
                                                                 </p>
                                                             )}
@@ -182,7 +181,7 @@ export function TopNav() {
                     {/* Profile */}
                     <Link
                         href="/profile"
-                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-sky-500 to-blue-600 text-white text-sm font-medium hover:shadow-lg hover:shadow-sky-200 transition-all"
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-sky-400 to-cyan-400 text-white text-sm font-bold hover:shadow-lg hover:scale-105 transition-all duration-300"
                     >
                         <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs">
                             👤
@@ -202,50 +201,50 @@ export function GoodmintonLogo({ size = 40 }: { size?: number }) {
             className="relative flex items-center justify-center"
             style={{ width: size, height: size }}
         >
-            {/* Shuttlecock shape background */}
+            {/* Cute Shuttlecock Logo */}
             <svg 
                 viewBox="0 0 100 100" 
-                className="absolute inset-0 w-full h-full"
+                className="absolute inset-0 w-full h-full drop-shadow-lg"
             >
-                {/* Feathers */}
+                {/* Feathers - Sky blue gradient */}
                 <path
                     d="M50 5 L30 40 L50 35 L70 40 Z"
-                    fill="url(#featherGradient)"
+                    fill="url(#featherGradientCute)"
                     opacity="0.9"
                 />
                 <path
                     d="M50 5 L25 45 L50 38 L75 45 Z"
-                    fill="url(#featherGradient2)"
+                    fill="url(#featherGradientCute2)"
                     opacity="0.7"
                 />
-                {/* Cork base */}
-                <circle cx="50" cy="65" r="25" fill="url(#corkGradient)" />
+                {/* Cork base - Gradient */}
+                <circle cx="50" cy="65" r="25" fill="url(#corkGradientCute)" />
                 
-                {/* B Letter */}
+                {/* G Letter */}
                 <text
                     x="50"
-                    y="72"
+                    y="73"
                     textAnchor="middle"
-                    fontSize="28"
-                    fontWeight="bold"
+                    fontSize="26"
+                    fontWeight="700"
                     fill="white"
-                    fontFamily="system-ui"
+                    fontFamily="system-ui, sans-serif"
                 >
-                    B
+                    G
                 </text>
                 
                 <defs>
-                    <linearGradient id="featherGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#38bdf8" />
-                        <stop offset="100%" stopColor="#0284c7" />
-                    </linearGradient>
-                    <linearGradient id="featherGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <linearGradient id="featherGradientCute" x1="0%" y1="0%" x2="100%" y2="100%">
                         <stop offset="0%" stopColor="#7dd3fc" />
                         <stop offset="100%" stopColor="#38bdf8" />
                     </linearGradient>
-                    <linearGradient id="corkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <linearGradient id="featherGradientCute2" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#bae6fd" />
+                        <stop offset="100%" stopColor="#7dd3fc" />
+                    </linearGradient>
+                    <linearGradient id="corkGradientCute" x1="0%" y1="0%" x2="100%" y2="100%">
                         <stop offset="0%" stopColor="#0ea5e9" />
-                        <stop offset="100%" stopColor="#0369a1" />
+                        <stop offset="100%" stopColor="#0284c7" />
                     </linearGradient>
                 </defs>
             </svg>
@@ -266,7 +265,7 @@ export function BottomNav() {
     ];
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-gray-200 md:hidden">
+        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-sky-100 shadow-lg lg:hidden">
             <div className="flex items-center justify-around h-16 px-2">
                 {mobileNavItems.map((item) => {
                     const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
@@ -277,10 +276,10 @@ export function BottomNav() {
                             key={item.href}
                             href={item.href}
                             className={cn(
-                                "flex flex-col items-center justify-center flex-1 py-2 rounded-xl transition-all",
+                                "flex flex-col items-center justify-center flex-1 py-2 rounded-2xl transition-all mx-1",
                                 isActive
-                                    ? "text-sky-600"
-                                    : "text-gray-400 hover:text-sky-500"
+                                    ? "text-sky-500 bg-sky-50"
+                                    : "text-slate-400 hover:text-sky-500 hover:bg-sky-50/50"
                             )}
                         >
                             <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
@@ -302,13 +301,13 @@ interface HeaderProps {
 
 export function Header({ title, subtitle, rightElement }: HeaderProps) {
     return (
-        <header className="sticky top-16 z-30 bg-white/80 backdrop-blur-xl border-b border-gray-100">
-            <div className="container mx-auto px-4 py-4">
+        <header className="sticky top-16 z-30 bg-white/80 backdrop-blur-xl border-b border-sky-100">
+            <div className="container mx-auto px-6 py-5">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+                        <h1 className="text-2xl font-bold text-slate-700">{title}</h1>
                         {subtitle && (
-                            <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>
+                            <p className="text-sm text-slate-400 mt-0.5">{subtitle}</p>
                         )}
                     </div>
                     {rightElement}

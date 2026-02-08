@@ -4,7 +4,8 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Player } from '@/types';
 import { Button } from '@/components/ui/button';
-import { X, MessageCircle, Heart } from 'lucide-react';
+import { X, MessageCircle, Heart, Calendar } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import confetti from 'canvas-confetti';
 
 interface MatchModalProps {
@@ -15,6 +16,15 @@ interface MatchModalProps {
 }
 
 export function MatchModal({ isOpen, onClose, matchedPlayer, currentUser }: MatchModalProps) {
+    const router = useRouter();
+
+    const handleScheduleSession = () => {
+        if (matchedPlayer) {
+            router.push(`/partners/scheduling?partnerId=${matchedPlayer.id}&partnerName=${encodeURIComponent(matchedPlayer.name)}`);
+            onClose();
+        }
+    };
+
     React.useEffect(() => {
         if (isOpen) {
             // Trigger confetti
@@ -165,17 +175,26 @@ export function MatchModal({ isOpen, onClose, matchedPlayer, currentUser }: Matc
 
                                 {/* Actions */}
                                 <motion.div
-                                    className="flex gap-3"
+                                    className="flex flex-col gap-3"
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: 0.7 }}
                                 >
-                                    <Button variant="outline" className="flex-1" onClick={onClose}>
-                                        Keep Swiping
-                                    </Button>
-                                    <Button className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600">
-                                        <MessageCircle size={18} className="mr-2" />
-                                        Send Message
+                                    <div className="flex gap-3">
+                                        <Button variant="outline" className="flex-1" onClick={onClose}>
+                                            Keep Swiping
+                                        </Button>
+                                        <Button className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600">
+                                            <MessageCircle size={18} className="mr-2" />
+                                            Send Message
+                                        </Button>
+                                    </div>
+                                    <Button 
+                                        onClick={handleScheduleSession}
+                                        className="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700"
+                                    >
+                                        <Calendar size={18} className="mr-2" />
+                                        Schedule a Session Now
                                     </Button>
                                 </motion.div>
                             </div>

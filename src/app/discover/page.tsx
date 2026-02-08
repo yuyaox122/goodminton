@@ -19,6 +19,7 @@ export default function DiscoverPage() {
     const [matchedPlayer, setMatchedPlayer] = useState<Player | null>(null);
     const [matches, setMatches] = useState<Match[]>([]);
     const [swipedIds, setSwipedIds] = useState<Set<string>>(new Set());
+    const [forceSwipeDirection, setForceSwipeDirection] = useState<'left' | 'right' | null>(null);
 
     // Filter states
     const [showFilters, setShowFilters] = useState(false);
@@ -41,6 +42,8 @@ export default function DiscoverPage() {
         const swipedPlayer = availablePlayers[0];
         if (!swipedPlayer) return;
 
+        // Reset force direction after swipe completes
+        setForceSwipeDirection(null);
         setSwipedIds((prev) => new Set([...prev, swipedPlayer.id]));
 
         if (direction === 'right') {
@@ -64,6 +67,14 @@ export default function DiscoverPage() {
         }
 
         setCurrentIndex((prev) => prev + 1);
+    };
+
+    const handleButtonSwipe = (direction: 'left' | 'right') => {
+        setForceSwipeDirection(direction);
+        // Small delay to allow animation to start before processing the swipe
+        setTimeout(() => {
+            handleSwipe(direction);
+        }, 150);
     };
 
     const handlePlayerClick = (player: Player) => {
@@ -174,12 +185,13 @@ export default function DiscoverPage() {
                                     currentIndex={0}
                                     onSwipe={handleSwipe}
                                     userLocation={userLocation}
+                                    forceSwipeDirection={forceSwipeDirection}
                                 />
                             </div>
 
                             {/* Swipe buttons */}
                             <SwipeButtons
-                                onSwipe={handleSwipe}
+                                onSwipe={handleButtonSwipe}
                                 disabled={availablePlayers.length === 0}
                             />
 

@@ -14,7 +14,13 @@ import {
     AlertTriangle,
     RotateCcw,
     UserX,
-    UserCheck
+    UserCheck,
+    Send,
+    CreditCard,
+    Bell,
+    MessageCircle,
+    CheckCircle2,
+    X
 } from 'lucide-react';
 import { Header } from '@/components/Navigation';
 import { useBooking, ScheduledSession } from '@/context/BookingContext';
@@ -35,6 +41,10 @@ export default function FareSplittingPage() {
     const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
     const [allocations, setAllocations] = useState<PaymentAllocation[]>([]);
     const [showWarning, setShowWarning] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [showReminderSent, setShowReminderSent] = useState(false);
+    const [showPaymentSimulation, setShowPaymentSimulation] = useState(false);
+    const [paymentStep, setPaymentStep] = useState<'details' | 'processing' | 'complete'>('details');
     
     const sessions = getSessionsForFareSplitting();
     const selectedSession = selectedSessionId ? getSessionById(selectedSessionId) : null;
@@ -135,11 +145,34 @@ export default function FareSplittingPage() {
         }
         if (selectedSessionId) {
             updatePaymentAllocations(selectedSessionId, allocations);
+            setShowSuccessModal(true);
         }
+    };
+
+    // Handle sending reminders
+    const handleSendReminders = () => {
+        setShowReminderSent(true);
+        setTimeout(() => setShowReminderSent(false), 3000);
+    };
+
+    // Handle payment simulation
+    const handlePaymentSimulation = () => {
+        setShowPaymentSimulation(true);
+        setPaymentStep('details');
+    };
+
+    const processPayment = () => {
+        setPaymentStep('processing');
+        setTimeout(() => {
+            setPaymentStep('complete');
+        }, 2000);
     };
 
     // Format currency
     const formatCurrency = (amount: number) => `£${amount.toFixed(2)}`;
+
+    // Get unpaid participants
+    const unpaidParticipants = allocations.filter(a => a.isIncluded && !a.isPaid);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50">
@@ -462,6 +495,222 @@ export default function FareSplittingPage() {
                                         Got it
                                     </button>
                                 </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Success Modal */}
+                <AnimatePresence>
+                    {showSuccessModal && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+                            onClick={() => setShowSuccessModal(false)}
+                        >
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                                animate={{ scale: 1, opacity: 1, y: 0 }}
+                                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl"
+                            >
+                                <button
+                                    onClick={() => setShowSuccessModal(false)}
+                                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                                
+                                <div className="text-center mb-6">
+                                    <motion.div 
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ type: "spring", delay: 0.2 }}
+                                        className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"
+                                    >
+                                        <CheckCircle2 className="w-10 h-10 text-green-500" />
+                                    </motion.div>
+                                    <h3 className="text-2xl font-bold text-gray-800 mb-2">Allocations Saved! 🎉</h3>
+                                    <p className="text-gray-600">
+                                        Payment splits have been updated for all participants.
+                                    </p>
+                                </div>
+
+                                {/* Unpaid participants summary */}
+                                {unpaidParticipants.length > 0 && (
+                                    <div className="bg-amber-50 rounded-2xl p-4 mb-6 border border-amber-100">
+                                        <p className="text-sm text-amber-700 font-medium mb-2">
+                                            {unpaidParticipants.length} participant{unpaidParticipants.length > 1 ? 's' : ''} still need to pay:
+                                        </p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {unpaidParticipants.map(p => (
+                                                <span key={p.participantId} className="px-3 py-1 bg-white rounded-full text-sm text-gray-700 border border-amber-200">
+                                                    {p.name} • {formatCurrency(p.amount)}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Action buttons */}
+                                <div className="space-y-3">
+                                    <button
+                                        onClick={handleSendReminders}
+                                        className="w-full flex items-center justify-center gap-3 py-4 bg-gradient-to-r from-sky-500 to-blue-500 text-white rounded-2xl font-semibold hover:shadow-lg transition-all"
+                                    >
+                                        <Bell className="w-5 h-5" />
+                                        Send Payment Reminders
+                                    </button>
+                                    
+                                    <button
+                                        onClick={handlePaymentSimulation}
+                                        className="w-full flex items-center justify-center gap-3 py-4 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-2xl font-semibold hover:shadow-lg transition-all"
+                                    >
+                                        <CreditCard className="w-5 h-5" />
+                                        Go to Payment Page
+                                    </button>
+
+                                    <button
+                                        onClick={() => setShowSuccessModal(false)}
+                                        className="w-full flex items-center justify-center gap-3 py-4 bg-gray-100 text-gray-700 rounded-2xl font-semibold hover:bg-gray-200 transition-all"
+                                    >
+                                        <MessageCircle className="w-5 h-5" />
+                                        Open Group Chat
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Reminder Sent Toast */}
+                <AnimatePresence>
+                    {showReminderSent && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 50 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 50 }}
+                            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50"
+                        >
+                            <div className="bg-green-500 text-white px-6 py-3 rounded-2xl shadow-lg flex items-center gap-3">
+                                <Send className="w-5 h-5" />
+                                <span className="font-medium">Reminders sent to {unpaidParticipants.length} participant{unpaidParticipants.length !== 1 ? 's' : ''}!</span>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Payment Simulation Modal */}
+                <AnimatePresence>
+                    {showPaymentSimulation && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+                            onClick={() => setShowPaymentSimulation(false)}
+                        >
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl"
+                            >
+                                {paymentStep === 'details' && (
+                                    <>
+                                        <div className="text-center mb-6">
+                                            <div className="w-16 h-16 bg-sky-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                <CreditCard className="w-8 h-8 text-sky-500" />
+                                            </div>
+                                            <h3 className="text-xl font-bold text-gray-800 mb-2">Collect Payment</h3>
+                                            <p className="text-gray-600">Simulated payment collection</p>
+                                        </div>
+
+                                        <div className="space-y-4 mb-6">
+                                            <div className="bg-gray-50 rounded-2xl p-4">
+                                                <p className="text-sm text-gray-500 mb-1">Total to collect</p>
+                                                <p className="text-3xl font-bold text-gray-800">
+                                                    {formatCurrency(unpaidParticipants.reduce((sum, p) => sum + p.amount, 0))}
+                                                </p>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <p className="text-sm font-medium text-gray-700">Payment Method</p>
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    <button className="p-3 border-2 border-sky-500 bg-sky-50 rounded-xl text-center">
+                                                        <span className="text-2xl">💳</span>
+                                                        <p className="text-xs mt-1 font-medium text-sky-600">Card</p>
+                                                    </button>
+                                                    <button className="p-3 border-2 border-gray-200 rounded-xl text-center hover:border-gray-300">
+                                                        <span className="text-2xl">🏦</span>
+                                                        <p className="text-xs mt-1 text-gray-500">Bank</p>
+                                                    </button>
+                                                    <button className="p-3 border-2 border-gray-200 rounded-xl text-center hover:border-gray-300">
+                                                        <span className="text-2xl">📱</span>
+                                                        <p className="text-xs mt-1 text-gray-500">PayPal</p>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-3">
+                                            <button
+                                                onClick={() => setShowPaymentSimulation(false)}
+                                                className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={processPayment}
+                                                className="flex-1 py-3 bg-sky-500 text-white rounded-xl font-semibold hover:bg-sky-600"
+                                            >
+                                                Process Payment
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+
+                                {paymentStep === 'processing' && (
+                                    <div className="text-center py-8">
+                                        <motion.div
+                                            animate={{ rotate: 360 }}
+                                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                            className="w-16 h-16 border-4 border-sky-200 border-t-sky-500 rounded-full mx-auto mb-4"
+                                        />
+                                        <h3 className="text-xl font-bold text-gray-800 mb-2">Processing Payment...</h3>
+                                        <p className="text-gray-600">Please wait while we process your payment</p>
+                                    </div>
+                                )}
+
+                                {paymentStep === 'complete' && (
+                                    <div className="text-center py-4">
+                                        <motion.div 
+                                            initial={{ scale: 0 }}
+                                            animate={{ scale: 1 }}
+                                            transition={{ type: "spring" }}
+                                            className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"
+                                        >
+                                            <CheckCircle2 className="w-10 h-10 text-green-500" />
+                                        </motion.div>
+                                        <h3 className="text-2xl font-bold text-gray-800 mb-2">Payment Complete! 🎉</h3>
+                                        <p className="text-gray-600 mb-6">
+                                            {formatCurrency(unpaidParticipants.reduce((sum, p) => sum + p.amount, 0))} has been collected
+                                        </p>
+                                        <button
+                                            onClick={() => {
+                                                setShowPaymentSimulation(false);
+                                                setShowSuccessModal(false);
+                                            }}
+                                            className="w-full py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600"
+                                        >
+                                            Done
+                                        </button>
+                                    </div>
+                                )}
                             </motion.div>
                         </motion.div>
                     )}

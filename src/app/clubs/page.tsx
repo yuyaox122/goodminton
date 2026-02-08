@@ -29,9 +29,17 @@ export default function ClubsPage() {
     const [clubs] = useState<Club[]>(mockClubs);
     const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
     const [selectedClub, setSelectedClub] = useState<Club | null>(null);
-    const [joinedClubs, setJoinedClubs] = useState<Set<string>>(new Set(['c2'])); // User already in Aston Shuttlers
+    const [joinedClubs, setJoinedClubs] = useState<Set<string>>(new Set(['c2', 'c4'])); // User already in Aston Shuttlers and Weekend Warriors
+    
+    // Current user ID for identifying created clubs
+    const currentUserId = mockCurrentUser.id;
 
     const userLocation = { lat: 52.4862, lng: -1.8904 };
+    
+    // Filter clubs into categories
+    const myCreatedClubs = clubs.filter(c => c.createdBy === currentUserId);
+    const myJoinedClubs = clubs.filter(c => joinedClubs.has(c.id) && c.createdBy !== currentUserId);
+    const discoverClubs = clubs.filter(c => !joinedClubs.has(c.id) && c.createdBy !== currentUserId);
 
     const handleJoin = (club: Club) => {
         if (club.isOpen) {
@@ -92,12 +100,64 @@ export default function ClubsPage() {
                             exit={{ opacity: 0, x: 20 }}
                             className="space-y-4"
                         >
-                            {/* My Clubs */}
-                            {joinedClubs.size > 0 && (
+                            {/* My Clubs - Created by User */}
+                            {myCreatedClubs.length > 0 && (
                                 <div>
-                                    <h2 className="text-sm font-medium text-muted-foreground mb-3">My Clubs</h2>
+                                    <h2 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                                        <Star size={14} className="text-amber-500" />
+                                        My Clubs (Created by you)
+                                    </h2>
                                     <div className="space-y-3">
-                                        {clubs.filter(c => joinedClubs.has(c.id)).map((club) => (
+                                        {myCreatedClubs.map((club) => (
+                                            <motion.div key={club.id} whileHover={{ scale: 1.01 }}>
+                                                <Card
+                                                    className="overflow-hidden cursor-pointer border-amber-500/30 bg-amber-500/5"
+                                                    onClick={() => setSelectedClub(club)}
+                                                >
+                                                    <CardContent className="p-4">
+                                                        <div className="flex items-start gap-4">
+                                                            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-2xl shadow-lg">
+                                                                👑
+                                                            </div>
+
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center gap-2">
+                                                                    <h3 className="font-bold truncate">{club.name}</h3>
+                                                                    <Badge variant="secondary" className="bg-amber-500/20 text-amber-700 text-xs">
+                                                                        <Star size={12} className="mr-1" />
+                                                                        Owner
+                                                                    </Badge>
+                                                                </div>
+
+                                                                <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                                                                    <span className="flex items-center gap-1">
+                                                                        <Users size={14} />
+                                                                        {club.memberCount}
+                                                                    </span>
+                                                                    <span className={`flex items-center gap-1 ${getActivityColor(club.activityLevel)}`}>
+                                                                        <Activity size={14} />
+                                                                        {club.activityLevel}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Joined Clubs - Member but not owner */}
+                            {myJoinedClubs.length > 0 && (
+                                <div>
+                                    <h2 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                                        <CheckCircle size={14} className="text-green-500" />
+                                        Joined Clubs
+                                    </h2>
+                                    <div className="space-y-3">
+                                        {myJoinedClubs.map((club) => (
                                             <motion.div key={club.id} whileHover={{ scale: 1.01 }}>
                                                 <Card
                                                     className="overflow-hidden cursor-pointer border-green-500/30 bg-green-500/5"
@@ -105,7 +165,7 @@ export default function ClubsPage() {
                                                 >
                                                     <CardContent className="p-4">
                                                         <div className="flex items-start gap-4">
-                                                            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-2xl shadow-lg">
+                                                            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-2xl shadow-lg">
                                                                 🏟️
                                                             </div>
 
@@ -139,10 +199,11 @@ export default function ClubsPage() {
                             )}
 
                             {/* Discover Clubs */}
+                            {discoverClubs.length > 0 && (
                             <div>
                                 <h2 className="text-sm font-medium text-muted-foreground mb-3">Discover Clubs</h2>
                                 <div className="space-y-3">
-                                    {clubs.filter(c => !joinedClubs.has(c.id)).map((club, index) => (
+                                    {discoverClubs.map((club, index) => (
                                         <motion.div
                                             key={club.id}
                                             initial={{ opacity: 0, y: 20 }}
@@ -213,6 +274,7 @@ export default function ClubsPage() {
                                     ))}
                                 </div>
                             </div>
+                            )}
                         </motion.div>
                     ) : (
                         <motion.div

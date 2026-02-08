@@ -12,10 +12,12 @@ interface SwipeCardProps {
     onSwipe: (direction: 'left' | 'right') => void;
     userLocation?: { lat: number; lng: number } | null;
     isTop?: boolean;
+    forceSwipeDirection?: 'left' | 'right' | null;
 }
 
-export function SwipeCard({ player, onSwipe, userLocation, isTop = false }: SwipeCardProps) {
+export function SwipeCard({ player, onSwipe, userLocation, isTop = false, forceSwipeDirection }: SwipeCardProps) {
     const [exitX, setExitX] = useState(0);
+    const [hasExited, setHasExited] = useState(false);
 
     const x = useMotionValue(0);
     const rotate = useTransform(x, [-200, 200], [-25, 25]);
@@ -24,6 +26,18 @@ export function SwipeCard({ player, onSwipe, userLocation, isTop = false }: Swip
     // Indicator opacities
     const likeOpacity = useTransform(x, [0, 100], [0, 1]);
     const nopeOpacity = useTransform(x, [-100, 0], [1, 0]);
+
+    // Handle forced swipe from buttons
+    React.useEffect(() => {
+        if (forceSwipeDirection && isTop && !hasExited) {
+            setHasExited(true);
+            if (forceSwipeDirection === 'right') {
+                setExitX(500);
+            } else {
+                setExitX(-500);
+            }
+        }
+    }, [forceSwipeDirection, isTop, hasExited]);
 
     const distance = userLocation
         ? calculateDistance(
@@ -191,9 +205,10 @@ interface CardStackProps {
     currentIndex: number;
     onSwipe: (direction: 'left' | 'right') => void;
     userLocation?: { lat: number; lng: number } | null;
+    forceSwipeDirection?: 'left' | 'right' | null;
 }
 
-export function CardStack({ players, currentIndex, onSwipe, userLocation }: CardStackProps) {
+export function CardStack({ players, currentIndex, onSwipe, userLocation, forceSwipeDirection }: CardStackProps) {
     const visiblePlayers = players.slice(currentIndex, currentIndex + 3);
 
     if (visiblePlayers.length === 0) {
@@ -218,6 +233,7 @@ export function CardStack({ players, currentIndex, onSwipe, userLocation }: Card
                         onSwipe={onSwipe}
                         userLocation={userLocation}
                         isTop={index === 0}
+                        forceSwipeDirection={index === 0 ? forceSwipeDirection : null}
                     />
                 )).reverse()}
             </AnimatePresence>
