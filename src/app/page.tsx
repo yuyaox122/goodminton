@@ -21,7 +21,8 @@ import {
     Target,
     Briefcase,
     FileText,
-    UserPlus
+    UserPlus,
+    ChevronDown
 } from 'lucide-react';
 import { useUser } from '@/context/UserContext';
 
@@ -478,24 +479,39 @@ export default function HomePage() {
 
                     {/* Scroll indicator - fades quickly */}
                     <motion.div
-                        className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
+                        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3"
                         style={{ opacity: scrollIndicatorOpacity }}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 1 }}
                     >
-                        <span className="text-slate-400 text-sm">Scroll to explore</span>
-                        <motion.div
-                            animate={{ y: [0, 8, 0] }}
-                            transition={{ duration: 1.5, repeat: Infinity }}
+                        <motion.span 
+                            className="text-indigo-600 font-semibold text-sm tracking-wide bg-white/80 backdrop-blur-sm px-4 py-1.5 rounded-full shadow-sm border border-indigo-100"
+                            animate={{ scale: [1, 1.05, 1] }}
+                            transition={{ duration: 2, repeat: Infinity }}
                         >
-                            <div className="w-6 h-10 rounded-full border-2 border-slate-300 flex items-start justify-center p-1">
+                            Scroll to explore ↓
+                        </motion.span>
+                        <motion.div
+                            className="flex flex-col items-center"
+                            animate={{ y: [0, 6, 0] }}
+                            transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+                        >
+                            <div className="w-8 h-12 rounded-full border-2 border-indigo-300 bg-white/60 backdrop-blur-sm flex items-start justify-center p-1.5 shadow-md">
                                 <motion.div 
-                                    className="w-1.5 h-3 bg-indigo-500 rounded-full"
-                                    animate={{ y: [0, 12, 0] }}
-                                    transition={{ duration: 1.5, repeat: Infinity }}
+                                    className="w-2 h-3 bg-gradient-to-b from-indigo-500 to-violet-500 rounded-full"
+                                    animate={{ y: [0, 16, 0] }}
+                                    transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
                                 />
                             </div>
+                            <motion.div 
+                                className="flex flex-col items-center -mt-1"
+                                animate={{ y: [0, 4, 0], opacity: [0.6, 1, 0.6] }}
+                                transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+                            >
+                                <ChevronDown className="w-5 h-5 text-indigo-500" />
+                                <ChevronDown className="w-5 h-5 text-indigo-400 -mt-3" />
+                            </motion.div>
                         </motion.div>
                     </motion.div>
                 </div>
